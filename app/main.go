@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -25,6 +26,12 @@ func main() {
 			break
 		} else if strings.ToLower(words[0]) == "echo" {
 			fmt.Println(strings.Join(words[1:], " "))
+		} else if strings.ToLower(words[0]) == "type" {
+			if slices.Contains([]string{"echo", "exit", "type"}, strings.ToLower(words[1])) == true {
+				fmt.Printf("%s is a shell builtin\n", strings.ToLower(words[1]))
+			} else {
+				fmt.Printf("%s: not found\n", strings.ToLower(words[1]))
+			}
 		} else {
 			fmt.Printf("%s: command not found\n", cmd)
 		}
