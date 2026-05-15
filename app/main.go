@@ -54,12 +54,15 @@ func main() {
 			if err != nil {
 				fmt.Printf("%s: %s\n", tokens[0], err.Error())
 			}
+		} else if strings.ToLower(tokens[0]) == "pwd" {
+			wd, _ := os.Getwd()
+			fmt.Println(wd)
 		} else if strings.ToLower(tokens[0]) == "exit" {
 			break
 		} else if strings.ToLower(tokens[0]) == "echo" {
 			fmt.Println(strings.Join(tokens[1:], " "))
 		} else if strings.ToLower(tokens[0]) == "type" {
-			if slices.Contains([]string{"echo", "exit", "type"}, strings.ToLower(tokens[1])) == true {
+			if slices.Contains([]string{"echo", "exit", "type", "pwd"}, strings.ToLower(tokens[1])) == true {
 				fmt.Printf("%s is a shell builtin\n", strings.ToLower(tokens[1]))
 			} else {
 				found, fullPath := is_executable(&tokens[1])
