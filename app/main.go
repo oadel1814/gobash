@@ -34,7 +34,23 @@ func main() {
 			if slices.Contains([]string{"echo", "exit", "type"}, strings.ToLower(tokens[1])) == true {
 				fmt.Printf("%s is a shell builtin\n", strings.ToLower(tokens[1]))
 			} else {
-				fmt.Printf("%s: not found\n", strings.ToLower(tokens[1]))
+				found := false
+
+				for _, path := range strings.Split(os.Getenv("PATH"), ":") {
+					fullPath := path + "/" + tokens[1]
+					if fileInfo, err := os.Stat(fullPath); err == nil {
+						if fileInfo.Mode().Perm()&0111 != 0 {
+							fmt.Printf("%s is %s\n", strings.ToLower(tokens[1]), fullPath)
+							found = true
+							break
+						}
+					}
+				}
+
+				if found == false {
+					fmt.Printf("%s: not found\n", strings.ToLower(tokens[1]))
+				}
+
 			}
 		} else {
 			fmt.Printf("%s: command not found\n", cmd)
