@@ -59,9 +59,16 @@ func main() {
 			fmt.Println(wd)
 		} else if strings.ToLower(tokens[0]) == "cd" {
 			to := tokens[1]
-			err := os.Chdir(to)
-			if err != nil {
-				fmt.Printf("cd: %s: No such file or directory\n", to)
+			if to == "~" {
+				err := os.Chdir(os.Getenv("HOME"))
+				if err != nil {
+					fmt.Printf("cd: %s: No such file or directory\n", to)
+				}
+			} else {
+				err := os.Chdir(to)
+				if err != nil {
+					fmt.Printf("cd: %s: No such file or directory\n", to)
+				}
 			}
 		} else if strings.ToLower(tokens[0]) == "exit" {
 			break
