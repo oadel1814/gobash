@@ -154,6 +154,13 @@ func parse(input string) Command {
 				args = append(args[:i], args[i+2:]...)
 				i--
 			}
+		case "2>>":
+			if i+1 < len(args) {
+				cmd.Stderr = args[i+1]
+				cmd.Append = true
+				args = append(args[:i], args[i+2:]...)
+				i--
+			}
 		}
 	}
 
@@ -181,7 +188,14 @@ func resolveStderr(cmd Command) (*os.File, error) {
 		return os.Stderr, nil
 	}
 
-	return os.OpenFile(cmd.Stderr, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	flags := os.O_WRONLY | os.O_CREATE
+	if cmd.Append {
+		flags |= os.O_APPEND
+	} else {
+		flags |= os.O_TRUNC
+	}
+
+	return os.OpenFile(cmd.Stderr, flags, 0644)
 }
 
 func isExecutable(name string) (bool, string) {
