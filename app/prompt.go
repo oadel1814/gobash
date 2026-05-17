@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -20,10 +21,6 @@ type Executable struct {
 var executableCache map[string]string
 
 func getExecutables() map[string]string {
-	if executableCache != nil {
-		return executableCache
-	}
-
 	executableCache = make(map[string]string)
 	for _, dir := range strings.Split(os.Getenv("PATH"), ":") {
 		files, err := os.ReadDir(dir)
@@ -40,28 +37,60 @@ func getExecutables() map[string]string {
 	return executableCache
 }
 
+var lastPrefix string
+var tabPressedOnce bool
+
 func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	prefix := string(line[:pos])
-	var matches [][]rune
+
+	matchSet := make(map[string]struct{})
+
 	for name := range builtins {
 		if strings.HasPrefix(name, prefix) {
-			matches = append(matches, []rune(name[len(prefix):]+" "))
+			matchSet[name] = struct{}{}
 		}
 	}
 
-	if len(matches) == 0 {
-		for name := range getExecutables() {
-			if strings.HasPrefix(name, prefix) {
-				matches = append(matches, []rune(name[len(prefix):]+" "))
-			}
+	for name := range getExecutables() {
+		if strings.HasPrefix(name, prefix) {
+			matchSet[name] = struct{}{}
 		}
 	}
 
-	if len(matches) == 0 {
+	var names []string
+	for name := range matchSet {
+		names = append(names, name)
+	}
+
+	if len(names) == 0 {
+		io.WriteString(rl.Stdout(), "\a")
+		tabPressedOnce = false
+		lastPrefix = ""
+		return nil, 0
+	}
+
+	sort.Strings(names)
+
+	if len(names) == 1 {
+		tabPressedOnce = false
+		lastPrefix = ""
+		return [][]rune{[]rune(names[0][len(prefix):] + " ")}, 0
+	}
+
+	if !tabPressedOnce || prefix != lastPrefix {
+		tabPressedOnce = true
+		lastPrefix = prefix
 		io.WriteString(rl.Stdout(), "\a")
 		return nil, 0
 	}
-	return matches, len(prefix)
+
+	tabPressedOnce = false
+	lastPrefix = ""
+
+	output := "\r\n" + strings.Join(names, "  ") + "\r\n" + rl.Config.Prompt + prefix
+	os.Stdout.WriteString(output)
+
+	return nil, 0
 }
 
 func initReadline() {
@@ -76,6 +105,7 @@ func initReadline() {
 }
 
 func prompt() string {
+
 	line, err := rl.Readline()
 	if err != nil {
 		os.Exit(0)
