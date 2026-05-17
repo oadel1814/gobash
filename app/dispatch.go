@@ -4,19 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func isExecutable(name string) (bool, string) {
-	for _, dir := range strings.Split(os.Getenv("PATH"), ":") {
-		fullPath := dir + "/" + name
-		if info, err := os.Stat(fullPath); err == nil {
-			if info.Mode().Perm()&0111 != 0 {
-				return true, fullPath
-			}
-		}
-	}
-	return false, ""
+	path, ok := getExecutables()[name]
+	return ok, path
 }
 
 func executeExternal(cmd Command) error {
