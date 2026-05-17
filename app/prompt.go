@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"strings"
 
@@ -18,6 +19,11 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 		if strings.HasPrefix(name, prefix) {
 			matches = append(matches, []rune(name[len(prefix):]+" "))
 		}
+	}
+
+	if len(matches) == 0 {
+		io.WriteString(rl.Stdout(), "\a")
+		return nil, 0
 	}
 	return matches, len(prefix)
 }
