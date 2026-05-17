@@ -1,0 +1,122 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"strings"
+)
+
+type HandlerFunc func(cmd Command) error
+
+var builtins map[string]HandlerFunc
+
+func init() {
+	builtins = map[string]HandlerFunc{
+		"echo": handleEcho,
+		"cd":   handleCd,
+		"pwd":  handlePwd,
+		"type": handleType,
+		"exit": handleExit,
+	}
+}
+
+func resolveStdout(cmd Command) (*os.File, error) {
+	if cmd.Stdout == "" {
+		return os.Stdout, nil
+	}
+	flags := os.O_WRONLY | os.O_CREATE
+	if cmd.Append {
+		flags |= os.O_APPEND
+	} else {
+		flags |= os.O_TRUNC
+	}
+	return os.OpenFile(cmd.Stdout, flags, 0644)
+}
+
+func resolveStderr(cmd Command) (*os.File, error) {
+	if cmd.Stderr == "" {
+		return os.Stderr, nil
+	}
+	flags := os.O_WRONLY | os.O_CREATE
+	if cmd.Append {
+		flags |= os.O_APPEND
+	} else {
+		flags |= os.O_TRUNC
+	}
+	return os.OpenFile(cmd.Stderr, flags, 0644)
+}
+
+func handleEcho(cmd Command) error {
+	if cmd.Name == "" {
+		return nil
+	}
+	output := strings.Join(cmd.Args, " ")
+	stdout, err := resolveStdout(cmd)
+	if err != nil {
+		return err
+	}
+	if stdout != os.Stdout {
+		defer stdout.Close()
+	}
+	_, err = io.WriteString(stdout, output+"\n")
+
+	stderr, err2 := resolveStderr(cmd)
+	if err2 != nil {
+		return err2
+	}
+	if stderr != os.Stderr {
+		defer stderr.Close()
+	}
+	if err != nil {
+		_, _ = io.WriteString(stderr, err.Error()+"\n")
+		return err
+	}
+	return nil
+}
+
+func handleCd(cmd Command) error {
+	if cmd.Name == "" {
+		return nil
+	}
+	if len(cmd.Args) == 0 || cmd.Args[0] == "~" {
+		return os.Chdir(os.Getenv("HOME"))
+	}
+	if err := os.Chdir(cmd.Args[0]); err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", cmd.Args[0])
+	}
+	return nil
+}
+
+func handlePwd(cmd Command) error {
+	if cmd.Name == "" {
+		return nil
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fmt.Println(dir)
+	return nil
+}
+
+func handleType(cmd Command) error {
+	if cmd.Name == "" {
+		return nil
+	}
+	if _, ok := builtins[cmd.Args[0]]; ok {
+		fmt.Printf("%s is a shell builtin\n", cmd.Args[0])
+		return nil
+	}
+	if ok, path := isExecutable(cmd.Args[0]); ok {
+		fmt.Printf("%s is %s\n", cmd.Args[0], path)
+		return nil
+	}
+	fmt.Printf("%s not found\n", cmd.Args[0])
+	return nil
+}
+
+func handleExit(cmd Command) error {
+	os.Exit(0)
+	return nil
+}

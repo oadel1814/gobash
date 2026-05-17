@@ -1,0 +1,66 @@
+package main
+
+import "strings"
+
+// Command holds a parsed shell command.
+type Command struct {
+	Name   string
+	Args   []string
+	Stdout string
+	Stderr string
+	Append bool
+}
+
+func parse(input string) Command {
+	tokens := tokenize(input)
+	cmd := Command{}
+
+	if len(tokens) == 0 {
+		return cmd
+	}
+
+	cmd.Name = tokens[0]
+	args := tokens[1:]
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case ">", "1>":
+			if i+1 < len(args) {
+				cmd.Stdout = args[i+1]
+				args = append(args[:i], args[i+2:]...)
+				i--
+			}
+		case ">>", "1>>":
+			if i+1 < len(args) {
+				cmd.Stdout = args[i+1]
+				cmd.Append = true
+				args = append(args[:i], args[i+2:]...)
+				i--
+			}
+		case "2>":
+			if i+1 < len(args) {
+				cmd.Stderr = args[i+1]
+				args = append(args[:i], args[i+2:]...)
+				i--
+			}
+		case "2>>":
+			if i+1 < len(args) {
+				cmd.Stderr = args[i+1]
+				cmd.Append = true
+				args = append(args[:i], args[i+2:]...)
+				i--
+			}
+		default:
+			continue
+		}
+	}
+
+	cmd.Args = args
+	return cmd
+}
+
+func tokenize(input string) []string {
+	// thin wrapper kept separate so you can later
+	// swap in a smarter tokenizer (e.g. quoting support)
+	return strings.Fields(input)
+}
