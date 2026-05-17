@@ -40,6 +40,33 @@ func getExecutables() map[string]string {
 var lastPrefix string
 var tabPressedOnce bool
 
+func longestCommonPrefix(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+
+	if len(strs) == 1 {
+		return strs[0]
+	}
+
+	minLen := len(strs[0])
+
+	for i := range strs {
+		minLen = min(minLen, len(strs[i]))
+	}
+
+	for i := 0; i < minLen; i++ {
+		ch := strs[0][i]
+		for _, s := range strs[1:] {
+			if s[i] != ch {
+				return strs[0][:i]
+			}
+		}
+	}
+
+	return strs[0][:minLen]
+}
+
 func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	prefix := string(line[:pos])
 
@@ -75,6 +102,13 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 		tabPressedOnce = false
 		lastPrefix = ""
 		return [][]rune{[]rune(names[0][len(prefix):] + " ")}, 0
+	}
+
+	lcp := longestCommonPrefix(names)
+	if len(lcp) > len(prefix) {
+		tabPressedOnce = false
+		lastPrefix = ""
+		return [][]rune{[]rune(lcp[len(prefix):])}, 0
 	}
 
 	if !tabPressedOnce || prefix != lastPrefix {
