@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -68,19 +69,45 @@ func longestCommonPrefix(strs []string) string {
 }
 
 func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
-	prefix := string(line[:pos])
+	fullLine := string(line[:pos])
+
+	words := strings.Fields(fullLine)
+
+	var prefix string
+	if len(words) == 0 {
+		return nil, 0
+	}
+
+	if fullLine[len(fullLine)-1] == ' ' {
+		prefix = ""
+	} else {
+		prefix = words[len(words)-1]
+	}
+
+	isFirstWord := len(words) == 1 && prefix != ""
 
 	matchSet := make(map[string]struct{})
 
-	for name := range builtins {
-		if strings.HasPrefix(name, prefix) {
-			matchSet[name] = struct{}{}
+	if isFirstWord {
+		for name := range builtins {
+			if strings.HasPrefix(name, prefix) {
+				matchSet[name] = struct{}{}
+			}
 		}
-	}
-
-	for name := range getExecutables() {
-		if strings.HasPrefix(name, prefix) {
-			matchSet[name] = struct{}{}
+		for name := range getExecutables() {
+			if strings.HasPrefix(name, prefix) {
+				matchSet[name] = struct{}{}
+			}
+		}
+	} else {
+		files, err := os.ReadDir("./")
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), prefix) {
+				matchSet[file.Name()] = struct{}{}
+			}
 		}
 	}
 
@@ -121,7 +148,7 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	tabPressedOnce = false
 	lastPrefix = ""
 
-	output := "\r\n" + strings.Join(names, "  ") + "\r\n" + rl.Config.Prompt + prefix
+	output := "\r\n" + strings.Join(names, "  ") + "\r\n" + rl.Config.Prompt + fullLine
 	os.Stdout.WriteString(output)
 
 	return nil, 0
