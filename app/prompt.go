@@ -100,7 +100,16 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 			}
 		}
 	} else {
-		files, err := os.ReadDir("./")
+
+		var dir string
+		if strings.Contains(prefix, "/") {
+			dir = prefix[:strings.LastIndex(prefix, "/")]
+			prefix = prefix[strings.LastIndex(prefix, "/")+1:]
+		} else {
+			dir = "."
+		}
+
+		files, err := os.ReadDir(dir)
 		if err != nil {
 			log.Fatal(err)
 		}
