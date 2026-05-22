@@ -68,6 +68,13 @@ func longestCommonPrefix(strs []string) string {
 	return strs[0][:minLen]
 }
 
+/*
+
+    cd di--<TAB>r1/
+	cd dir1/dir2/
+
+*/
+
 func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	fullLine := string(line[:pos])
 
@@ -88,6 +95,8 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 
 	matchSet := make(map[string]struct{})
 
+	var dir string
+
 	if isFirstWord {
 		for name := range builtins {
 			if strings.HasPrefix(name, prefix) {
@@ -101,7 +110,6 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 		}
 	} else {
 
-		var dir string
 		if strings.Contains(prefix, "/") {
 			dir = prefix[:strings.LastIndex(prefix, "/")]
 			prefix = prefix[strings.LastIndex(prefix, "/")+1:]
@@ -137,7 +145,18 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	if len(names) == 1 {
 		tabPressedOnce = false
 		lastPrefix = ""
-		return [][]rune{[]rune(names[0][len(prefix):] + " ")}, 0
+
+		suffix := " "
+
+		var path string
+		if dir != "" {
+			path = dir + "/" + names[0]
+		}
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			suffix = "/"
+		}
+
+		return [][]rune{[]rune(names[0][len(prefix):] + suffix)}, 0
 	}
 
 	lcp := longestCommonPrefix(names)
