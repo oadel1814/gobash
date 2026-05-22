@@ -49,14 +49,40 @@ func resolveStderr(cmd Command) (*os.File, error) {
 	return os.OpenFile(cmd.Stderr, flags, 0644)
 }
 
+var completions = map[string]string{}
+
 func handleComplete(cmd Command) error {
 
+	if len(cmd.Args) == 0 {
+		return nil
+	}
+
 	flag := cmd.Args[0]
-	if flag == "-p" {
-		return errors.New("complete: " + cmd.Args[1] + ": no completion specification")
+
+	switch flag {
+	case "-p":
+		if len(cmd.Args) < 2 {
+			return errors.New("complete: usage: complete -p <command>")
+		}
+
+		command := cmd.Args[1]
+		path, ok := completions[command]
+		if !ok {
+			return errors.New("complete: " + command + ": no completion specification")
+		}
+		fmt.Printf("complete -C '%s' %s\n", path, command)
+
+	case "-C":
+		if len(cmd.Args) < 3 {
+			return errors.New("complete: usage: complete -C <path> <command>")
+		}
+		path := cmd.Args[1]
+		command := cmd.Args[2]
+		completions[command] = path
 	}
 
 	return nil
+
 }
 
 func handleEcho(cmd Command) error {
