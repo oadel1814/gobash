@@ -13,11 +13,12 @@ var builtins map[string]HandlerFunc
 
 func init() {
 	builtins = map[string]HandlerFunc{
-		"echo": handleEcho,
-		"cd":   handleCd,
-		"pwd":  handlePwd,
-		"type": handleType,
-		"exit": handleExit,
+		"echo":     handleEcho,
+		"cd":       handleCd,
+		"pwd":      handlePwd,
+		"type":     handleType,
+		"exit":     handleExit,
+		"complete": handleComplete,
 	}
 }
 
@@ -45,6 +46,10 @@ func resolveStderr(cmd Command) (*os.File, error) {
 		flags |= os.O_TRUNC
 	}
 	return os.OpenFile(cmd.Stderr, flags, 0644)
+}
+
+func handleComplete(cmd Command) error {
+	return nil
 }
 
 func handleEcho(cmd Command) error {
