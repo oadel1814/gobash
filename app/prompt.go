@@ -176,6 +176,20 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	tabPressedOnce = false
 	lastPrefix = ""
 
+	for i, name := range names {
+		suffix := " "
+
+		var path string
+		if dir != "" {
+			path = dir + "/" + name
+		}
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			suffix = "/"
+		}
+
+		names[i] = name + suffix
+	}
+
 	output := "\r\n" + strings.Join(names, "  ") + "\r\n" + rl.Config.Prompt + fullLine
 	os.Stdout.WriteString(output)
 
