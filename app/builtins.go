@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,6 +50,12 @@ func resolveStderr(cmd Command) (*os.File, error) {
 }
 
 func handleComplete(cmd Command) error {
+
+	flag := cmd.Args[0]
+	if flag == "-p" {
+		return errors.New("complete: " + cmd.Args[1] + ": no completion specification")
+	}
+
 	return nil
 }
 
