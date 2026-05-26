@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -103,7 +104,7 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 			} else if len(words) >= 2 {
 				prevWord = words[len(words)-2]
 			}
-			result := runCompletionScript(completerPath, commandName, prefix, prevWord)
+			result := runCompletionScript(completerPath, commandName, prefix, prevWord, fullLine)
 			if result != "" {
 				completion := result[len(prefix):]
 				return [][]rune{[]rune(completion + " ")}, 0
@@ -216,8 +217,12 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	return nil, 0
 }
 
-func runCompletionScript(path, CommandName, prefix, prevWord string) string {
-	cmd := exec.Command(path, CommandName, prefix, prevWord)
+func runCompletionScript(path, commandName, prefix, prevWord, fullLine string) string {
+	cmd := exec.Command(path, commandName, prefix, prevWord)
+	cmd.Env = append(os.Environ(),
+		"COMP_LINE="+fullLine,
+		"COMP_POINT="+strconv.Itoa(len(fullLine)),
+	)
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
