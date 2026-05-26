@@ -79,6 +79,12 @@ func handleComplete(cmd Command) error {
 		path := cmd.Args[1]
 		command := cmd.Args[2]
 		completions[command] = path
+	case "-r":
+		if len(cmd.Args) < 2 {
+			return errors.New("complete: usage: complete -r <command>")
+		}
+		command := cmd.Args[1]
+		delete(completions, command)
 	}
 
 	return nil
