@@ -116,7 +116,12 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 				return [][]rune{[]rune(completion + " ")}, 0
 			}
 
-			// Multiple candidates: double-TAB behavior
+			lcp := longestCommonPrefix(candidates)
+			if len(lcp) > len(prefix) {
+				completion := lcp[len(prefix):]
+				return [][]rune{[]rune(completion)}, 0
+			}
+
 			sort.Strings(candidates)
 			if !tabPressedOnce || prefix != lastPrefix {
 				tabPressedOnce = true
