@@ -104,12 +104,31 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 			} else if len(words) >= 2 {
 				prevWord = words[len(words)-2]
 			}
-			result := runCompletionScript(completerPath, commandName, prefix, prevWord, fullLine)
-			if result != "" {
-				completion := result[len(prefix):]
+			candidates := runCompletionScript(completerPath, commandName, prefix, prevWord, fullLine)
+
+			if len(candidates) == 0 {
+				io.WriteString(rl.Stdout(), "\a")
+				return nil, 0
+			}
+
+			if len(candidates) == 1 {
+				completion := candidates[0][len(prefix):]
 				return [][]rune{[]rune(completion + " ")}, 0
 			}
-			io.WriteString(rl.Stdout(), "\a")
+
+			// Multiple candidates: double-TAB behavior
+			sort.Strings(candidates)
+			if !tabPressedOnce || prefix != lastPrefix {
+				tabPressedOnce = true
+				lastPrefix = prefix
+				io.WriteString(rl.Stdout(), "\a")
+				return nil, 0
+			}
+
+			tabPressedOnce = false
+			lastPrefix = ""
+			output := "\r\n" + strings.Join(candidates, "  ") + "\r\n" + rl.Config.Prompt + fullLine
+			os.Stdout.WriteString(output)
 			return nil, 0
 		}
 	}
@@ -217,7 +236,7 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	return nil, 0
 }
 
-func runCompletionScript(path, commandName, prefix, prevWord, fullLine string) string {
+func runCompletionScript(path, commandName, prefix, prevWord, fullLine string) []string {
 	cmd := exec.Command(path, commandName, prefix, prevWord)
 	cmd.Env = append(os.Environ(),
 		"COMP_LINE="+fullLine,
@@ -225,11 +244,17 @@ func runCompletionScript(path, commandName, prefix, prevWord, fullLine string) s
 	)
 	out, err := cmd.Output()
 	if err != nil {
-		return ""
+		return nil
 	}
 
-	line := strings.SplitN(strings.TrimRight(string(out), "\r\n"), "\n", 2)[0]
-	return strings.TrimSpace(line)
+	var candidates []string
+	for _, line := range strings.Split(strings.TrimRight(string(out), "\r\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			candidates = append(candidates, line)
+		}
+	}
+	return candidates
 }
 
 func initReadline() {
