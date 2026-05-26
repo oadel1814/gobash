@@ -94,10 +94,16 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 
 	isFirstWord := len(words) == 1 && prefix != ""
 
-	if !isFirstWord && len(words) >= 1 {
+	if !isFirstWord {
 		commandName := words[0]
 		if completerPath, ok := completions[commandName]; ok {
-			result := runCompletionScript(completerPath)
+			var prevWord string
+			if prefix == "" {
+				prevWord = words[len(words)-1]
+			} else if len(words) >= 2 {
+				prevWord = words[len(words)-2]
+			}
+			result := runCompletionScript(completerPath, commandName, prefix, prevWord)
 			if result != "" {
 				completion := result[len(prefix):]
 				return [][]rune{[]rune(completion + " ")}, 0
@@ -210,8 +216,8 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	return nil, 0
 }
 
-func runCompletionScript(path string) string {
-	cmd := exec.Command(path)
+func runCompletionScript(path, CommandName, prefix, prevWord string) string {
+	cmd := exec.Command(path, CommandName, prefix, prevWord)
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
