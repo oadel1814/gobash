@@ -102,6 +102,7 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 				completion := result[len(prefix):]
 				return [][]rune{[]rune(completion + " ")}, 0
 			}
+			io.WriteString(rl.Stdout(), "\a")
 			return nil, 0
 		}
 	}
