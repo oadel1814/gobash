@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -92,6 +93,18 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	}
 
 	isFirstWord := len(words) == 1 && prefix != ""
+
+	if !isFirstWord && len(words) >= 1 {
+		commandName := words[0]
+		if completerPath, ok := completions[commandName]; ok {
+			result := runCompletionScript(completerPath)
+			if result != "" {
+				completion := result[len(prefix):]
+				return [][]rune{[]rune(completion + " ")}, 0
+			}
+			return nil, 0
+		}
+	}
 
 	matchSet := make(map[string]struct{})
 
@@ -194,6 +207,17 @@ func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	os.Stdout.WriteString(output)
 
 	return nil, 0
+}
+
+func runCompletionScript(path string) string {
+	cmd := exec.Command(path)
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	line := strings.SplitN(strings.TrimRight(string(out), "\r\n"), "\n", 2)[0]
+	return strings.TrimSpace(line)
 }
 
 func initReadline() {
