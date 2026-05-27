@@ -6,6 +6,8 @@ import (
 	"os/exec"
 )
 
+var backgroundCounter int
+
 func isExecutable(name string) (bool, string) {
 	path, ok := getExecutables()[name]
 	return ok, path
@@ -26,6 +28,27 @@ func executeExternal(cmd Command) error {
 	}
 	if stderr != os.Stderr {
 		defer stderr.Close()
+	}
+
+	if cmd.background {
+		proc := exec.Command(cmd.Name, cmd.Args...)
+		proc.Stdin = os.Stdin
+		proc.Stdout = stdout
+		proc.Stderr = stderr
+
+		if err := proc.Start(); err != nil {
+			return err
+		}
+
+		pid := proc.Process.Pid
+		backgroundCounter++
+		fmt.Printf("[%d] %d\n", backgroundCounter, pid)
+
+		go func() {
+			proc.Wait()
+		}()
+
+		return nil
 	}
 
 	proc := exec.Command(cmd.Name, cmd.Args...)
