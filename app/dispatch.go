@@ -6,7 +6,8 @@ import (
 	"os/exec"
 )
 
-var backgroundCounter int
+var backgroundCounter int = 1
+var backgroundJobs = make(map[int]*exec.Cmd)
 
 func isExecutable(name string) (bool, string) {
 	path, ok := getExecutables()[name]
@@ -36,14 +37,15 @@ func executeExternal(cmd Command) error {
 		proc.Stdout = stdout
 		proc.Stderr = stderr
 
+		backgroundJobs[backgroundCounter] = proc
+
 		if err := proc.Start(); err != nil {
 			return err
 		}
 
 		pid := proc.Process.Pid
-		backgroundCounter++
 		fmt.Printf("[%d] %d\n", backgroundCounter, pid)
-
+		backgroundCounter++
 		go func() {
 			proc.Wait()
 		}()

@@ -53,6 +53,16 @@ func resolveStderr(cmd Command) (*os.File, error) {
 var completions = map[string]string{}
 
 func handleJobs(cmd Command) error {
+	for id, proc := range backgroundJobs {
+		processString := strings.Join([]string{strings.Join(proc.Args, " ")}, " ")
+		if proc.ProcessState != nil && proc.ProcessState.Exited() {
+			fmt.Printf("[%d]+ %-24s%s\n", id, "Done", processString)
+			delete(backgroundJobs, id)
+		} else {
+			fmt.Printf("[%d]+ %-24s%s &\n", id, "Running", processString)
+		}
+	}
+
 	return nil
 }
 
