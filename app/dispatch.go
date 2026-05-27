@@ -39,6 +39,9 @@ func executeExternal(cmd Command) error {
 
 		backgroundJobs[backgroundCounter] = proc
 
+		secondMostRecentJob = mostRecentJob
+		mostRecentJob = backgroundCounter
+
 		if err := proc.Start(); err != nil {
 			return err
 		}

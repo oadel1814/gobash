@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -52,14 +53,36 @@ func resolveStderr(cmd Command) (*os.File, error) {
 
 var completions = map[string]string{}
 
+// Track these alongside backgroundJobs
+var mostRecentJob int
+var secondMostRecentJob int
+
 func handleJobs(cmd Command) error {
-	for id, proc := range backgroundJobs {
-		processString := strings.Join([]string{strings.Join(proc.Args, " ")}, " ")
+	ids := make([]int, 0, len(backgroundJobs))
+	for id := range backgroundJobs {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+
+	for _, id := range ids {
+		proc := backgroundJobs[id]
+		processString := strings.Join(proc.Args, " ")
+
+		var marker string
+		switch id {
+		case mostRecentJob:
+			marker = "+"
+		case secondMostRecentJob:
+			marker = "-"
+		default:
+			marker = " "
+		}
+
 		if proc.ProcessState != nil && proc.ProcessState.Exited() {
-			fmt.Printf("[%d]+ %-24s%s\n", id, "Done", processString)
+			fmt.Printf("[%d]%s %-24s%s\n", id, marker, "Done", processString)
 			delete(backgroundJobs, id)
 		} else {
-			fmt.Printf("[%d]+ %-24s%s &\n", id, "Running", processString)
+			fmt.Printf("[%d]%s %-24s%s &\n", id, marker, "Running", processString)
 		}
 	}
 
