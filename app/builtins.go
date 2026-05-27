@@ -53,7 +53,6 @@ func resolveStderr(cmd Command) (*os.File, error) {
 
 var completions = map[string]string{}
 
-// Track these alongside backgroundJobs
 var mostRecentJob int
 var secondMostRecentJob int
 
@@ -81,6 +80,25 @@ func handleJobs(cmd Command) error {
 		if proc.ProcessState != nil && proc.ProcessState.Exited() {
 			fmt.Printf("[%d]%s %-24s%s\n", id, marker, "Done", processString)
 			delete(backgroundJobs, id)
+
+			if mostRecentJob == id || secondMostRecentJob == id {
+				remaining := ids[:0]
+				for _, k := range ids {
+					if k != id {
+						remaining = append(remaining, k)
+					}
+				}
+				switch len(remaining) {
+				case 0:
+					mostRecentJob, secondMostRecentJob = 0, 0
+				case 1:
+					mostRecentJob, secondMostRecentJob = remaining[0], 0
+				default:
+					mostRecentJob = remaining[len(remaining)-1]
+					secondMostRecentJob = remaining[len(remaining)-2]
+				}
+			}
+
 		} else {
 			fmt.Printf("[%d]%s %-24s%s &\n", id, marker, "Running", processString)
 		}
