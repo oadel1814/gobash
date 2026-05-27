@@ -4,11 +4,12 @@ import "strings"
 
 // Command holds a parsed shell command.
 type Command struct {
-	Name   string
-	Args   []string
-	Stdout string
-	Stderr string
-	Append bool
+	Name       string
+	Args       []string
+	Stdout     string
+	Stderr     string
+	Append     bool
+	background bool
 }
 
 func parse(input string) Command {
@@ -50,6 +51,10 @@ func parse(input string) Command {
 				args = append(args[:i], args[i+2:]...)
 				i--
 			}
+		case "&":
+			cmd.background = true
+			args = append(args[:i], args[i+1:]...)
+			i--
 		default:
 			continue
 		}

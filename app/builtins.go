@@ -20,6 +20,7 @@ func init() {
 		"type":     handleType,
 		"exit":     handleExit,
 		"complete": handleComplete,
+		"jobs":     handleJobs,
 	}
 }
 
@@ -50,6 +51,10 @@ func resolveStderr(cmd Command) (*os.File, error) {
 }
 
 var completions = map[string]string{}
+
+func handleJobs(cmd Command) error {
+	return nil
+}
 
 func handleComplete(cmd Command) error {
 
