@@ -30,24 +30,23 @@ func init() {
 	}
 }
 
+func validateEnvVar(name string) error {
+	if name == "" {
+		return errors.New("variable name cannot be empty")
+	}
+
+	if name[0] >= '0' && name[0] <= '9' || name[0] == '-' || strings.Contains(name, "=") || strings.Contains(name, "-") {
+		return errors.New("variable name cannot start with a digit or hyphen")
+	}
+
+	return nil
+}
+
 func handleDeclare(cmd Command) error {
 	if len(cmd.Args) == 0 {
 		return nil
 	}
 
-	// flag := cmd.Args[0]
-
-	// switch flag {
-	// case "-p":
-	// 	if len(cmd.Args) < 2 {
-	// 		return errors.New("declare: usage: declare -p <var>")
-	// 	}
-
-	// 	varName := cmd.Args[1]
-	// 	fmt.Printf("declare: %s: not found\n", varName)
-	// }
-
-	// handle printing the value of a variable with declare -p VAR
 	if cmd.Args[0] == "-p" {
 		if len(cmd.Args) < 2 {
 			return errors.New("declare: usage: declare -p <var>")
@@ -70,6 +69,10 @@ func handleDeclare(cmd Command) error {
 
 	name := args[0]
 	value := args[1]
+
+	if err := validateEnvVar(name); err != nil {
+		return fmt.Errorf("declare: `%s=%s': not a valid identifier", name, value)
+	}
 
 	os.Setenv(name, value)
 
