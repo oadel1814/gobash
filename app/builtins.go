@@ -31,6 +31,22 @@ func init() {
 }
 
 func handleDeclare(cmd Command) error {
+	if len(cmd.Args) == 0 {
+		return nil
+	}
+
+	flag := cmd.Args[0]
+
+	switch flag {
+	case "-p":
+		if len(cmd.Args) < 2 {
+			return errors.New("declare: usage: declare -p <var>")
+		}
+
+		varName := cmd.Args[1]
+		fmt.Printf("declare: %s: not found\n", varName)
+	}
+
 	return nil
 }
 
