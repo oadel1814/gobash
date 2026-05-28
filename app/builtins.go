@@ -304,6 +304,40 @@ func loadHistory(filePath string) error {
 
 }
 
+func writeHistory(filePath string) error {
+	var builder strings.Builder
+	for _, cmd := range history {
+		builder.WriteString(cmd.Name)
+		if len(cmd.Args) > 0 {
+			builder.WriteString(" " + strings.Join(cmd.Args, " "))
+		}
+		builder.WriteString("\n")
+	}
+
+	return os.WriteFile(filePath, []byte(builder.String()), 0644)
+}
+
+func appendHistory(filePath string) error {
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("history: cannot open file for appending: %w", err)
+	}
+	defer f.Close()
+
+	for i := historyLastAppended; i < len(history); i++ {
+		line := history[i].Name
+		if len(history[i].Args) > 0 {
+			line += " " + strings.Join(history[i].Args, " ")
+		}
+		line += "\n"
+		if _, err := f.WriteString(line); err != nil {
+			return fmt.Errorf("history: cannot write to file: %w", err)
+		}
+	}
+	historyLastAppended = len(history)
+	return nil
+}
+
 func handleHistory(cmd Command) error {
 	if len(cmd.Args) >= 2 {
 		switch cmd.Args[0] {
@@ -312,37 +346,10 @@ func handleHistory(cmd Command) error {
 			return loadHistory(filePath)
 		case "-w":
 			filePath := cmd.Args[1]
-			var builder strings.Builder
-			for _, cmd := range history {
-				builder.WriteString(cmd.Name)
-				if len(cmd.Args) > 0 {
-					builder.WriteString(" " + strings.Join(cmd.Args, " "))
-				}
-				builder.WriteString("\n")
-			}
-			err := os.WriteFile(filePath, []byte(builder.String()), 0644)
-			if err != nil {
-				return fmt.Errorf("history: cannot write file: %w", err)
-			}
+			return writeHistory(filePath)
 		case "-a":
 			filePath := cmd.Args[1]
-			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				return fmt.Errorf("history: cannot open file for appending: %w", err)
-			}
-			defer f.Close()
-
-			for i := historyLastAppended; i < len(history); i++ {
-				line := history[i].Name
-				if len(history[i].Args) > 0 {
-					line += " " + strings.Join(history[i].Args, " ")
-				}
-				line += "\n"
-				if _, err := f.WriteString(line); err != nil {
-					return fmt.Errorf("history: cannot write to file: %w", err)
-				}
-			}
-			historyLastAppended = len(history)
+			return appendHistory(filePath)
 		}
 		return nil
 	}
@@ -501,6 +508,7 @@ func handleType(cmd Command) error {
 }
 
 func handleExit(cmd Command) error {
+	writeHistory(os.Getenv("HISTFILE"))
 	os.Exit(0)
 	return nil
 }
