@@ -35,17 +35,43 @@ func handleDeclare(cmd Command) error {
 		return nil
 	}
 
-	flag := cmd.Args[0]
+	// flag := cmd.Args[0]
 
-	switch flag {
-	case "-p":
+	// switch flag {
+	// case "-p":
+	// 	if len(cmd.Args) < 2 {
+	// 		return errors.New("declare: usage: declare -p <var>")
+	// 	}
+
+	// 	varName := cmd.Args[1]
+	// 	fmt.Printf("declare: %s: not found\n", varName)
+	// }
+
+	// handle printing the value of a variable with declare -p VAR
+	if cmd.Args[0] == "-p" {
 		if len(cmd.Args) < 2 {
 			return errors.New("declare: usage: declare -p <var>")
 		}
 
 		varName := cmd.Args[1]
-		fmt.Printf("declare: %s: not found\n", varName)
+		value, exists := os.LookupEnv(varName)
+		if !exists {
+			return fmt.Errorf("declare: %s: not found", varName)
+		}
+		fmt.Printf("declare -- %s=%q\n", varName, value)
+		return nil
 	}
+
+	// handle simple NAME=VALUE case
+	args := strings.SplitN(cmd.Args[0], "=", 2)
+	if len(args) != 2 {
+		return errors.New("declare: usage: declare NAME=VALUE")
+	}
+
+	name := args[0]
+	value := args[1]
+
+	os.Setenv(name, value)
 
 	return nil
 }
