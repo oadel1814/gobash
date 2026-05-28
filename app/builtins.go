@@ -167,26 +167,42 @@ func handleJobs(cmd Command) error {
 var history []Command
 
 func handleHistory(cmd Command) error {
-	if len(cmd.Args) >= 2 && cmd.Args[0] == "-r" {
-		filePath := cmd.Args[1]
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("history: cannot read file: %w", err)
-		}
-
-		lines := strings.Split(string(content), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
+	if len(cmd.Args) >= 2 {
+		if cmd.Args[0] == "-r" {
+			filePath := cmd.Args[1]
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				return fmt.Errorf("history: cannot read file: %w", err)
 			}
 
-			tokens := tokenize(line)
-			if len(tokens) > 0 {
-				history = append(history, Command{
-					Name: tokens[0],
-					Args: tokens[1:],
-				})
+			lines := strings.Split(string(content), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+
+				tokens := tokenize(line)
+				if len(tokens) > 0 {
+					history = append(history, Command{
+						Name: tokens[0],
+						Args: tokens[1:],
+					})
+				}
+			}
+		} else if cmd.Args[0] == "-w" {
+			filePath := cmd.Args[1]
+			var builder strings.Builder
+			for _, cmd := range history {
+				builder.WriteString(cmd.Name)
+				if len(cmd.Args) > 0 {
+					builder.WriteString(" " + strings.Join(cmd.Args, " "))
+				}
+				builder.WriteString("\n")
+			}
+			err := os.WriteFile(filePath, []byte(builder.String()), 0644)
+			if err != nil {
+				return fmt.Errorf("history: cannot write file: %w", err)
 			}
 		}
 		return nil
