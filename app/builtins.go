@@ -167,6 +167,30 @@ func handleJobs(cmd Command) error {
 var history []Command
 
 func handleHistory(cmd Command) error {
+	if len(cmd.Args) >= 2 && cmd.Args[0] == "-r" {
+		filePath := cmd.Args[1]
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("history: cannot read file: %w", err)
+		}
+
+		lines := strings.Split(string(content), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+
+			tokens := tokenize(line)
+			if len(tokens) > 0 {
+				history = append(history, Command{
+					Name: tokens[0],
+					Args: tokens[1:],
+				})
+			}
+		}
+		return nil
+	}
 
 	n := len(history)
 	if len(cmd.Args) > 0 {
@@ -183,9 +207,22 @@ func handleHistory(cmd Command) error {
 		}
 	}
 
-	for i := len(history) - n; i < len(history); i++ {
-		fmt.Printf("%5d  %s\n", i+1, history[i].Name+" "+strings.Join(history[i].Args, " "))
+	stdout, err := resolveStdout(cmd)
+	if err != nil {
+		return err
 	}
+	if stdout != os.Stdout && cmd.StdoutOverride == nil {
+		defer stdout.Close()
+	}
+
+	for i := len(history) - n; i < len(history); i++ {
+		cmdString := history[i].Name
+		if len(history[i].Args) > 0 {
+			cmdString += " " + strings.Join(history[i].Args, " ")
+		}
+		fmt.Fprintf(stdout, "%5d  %s\n", i+1, cmdString)
+	}
+
 	return nil
 }
 
