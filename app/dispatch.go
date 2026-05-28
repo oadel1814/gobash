@@ -6,7 +6,6 @@ import (
 	"os/exec"
 )
 
-var backgroundCounter int = 1
 var backgroundJobs = make(map[int]*exec.Cmd)
 
 func isExecutable(name string) (bool, string) {
@@ -41,17 +40,21 @@ func executeExternal(cmd Command) error {
 			return err
 		}
 
-		backgroundJobs[backgroundCounter] = proc
+		jobID := 1
+		for {
+			if _, exists := backgroundJobs[jobID]; !exists {
+				break
+			}
+			jobID++
+		}
+
+		backgroundJobs[jobID] = proc
 
 		secondMostRecentJob = mostRecentJob
-		mostRecentJob = backgroundCounter
+		mostRecentJob = jobID
 
 		pid := proc.Process.Pid
-		fmt.Printf("[%d] %d\n", backgroundCounter, pid)
-		backgroundCounter++
-
-		// REMOVED the go func() { proc.Wait() }()
-		// reapJobs() using syscall.Wait4 will now accurately handle process completion
+		fmt.Printf("[%d] %d\n", jobID, pid)
 
 		return nil
 	}
