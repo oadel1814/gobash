@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -166,8 +167,24 @@ func handleJobs(cmd Command) error {
 var history []Command
 
 func handleHistory(cmd Command) error {
-	for i, command := range history {
-		fmt.Printf("%5d  %s\n", i+1, strings.Join(append([]string{command.Name}, command.Args...), " "))
+
+	n := len(history)
+	if len(cmd.Args) > 0 {
+		var err error
+		n, err = strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			return errors.New("history: argument must be a number")
+		}
+		if n < 0 {
+			return errors.New("history: argument must be non-negative")
+		}
+		if n > len(history) {
+			n = len(history)
+		}
+	}
+
+	for i := len(history) - n; i < len(history); i++ {
+		fmt.Printf("%5d  %s\n", i+1, history[i].Name+" "+strings.Join(history[i].Args, " "))
 	}
 	return nil
 }
