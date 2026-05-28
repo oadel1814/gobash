@@ -26,7 +26,12 @@ func init() {
 		"jobs":     handleJobs,
 		"history":  handleHistory,
 		"help":     handleHelp,
+		"declare":  handleDeclare,
 	}
+}
+
+func handleDeclare(cmd Command) error {
+	return nil
 }
 
 func handleHelp(cmd Command) error {

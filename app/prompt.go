@@ -70,13 +70,6 @@ func longestCommonPrefix(strs []string) string {
 	return strs[0][:minLen]
 }
 
-/*
-
-    cd di--<TAB>r1/
-	cd dir1/dir2/
-
-*/
-
 func (sc *ShellCompleter) Do(line []rune, pos int) ([][]rune, int) {
 	fullLine := string(line[:pos])
 

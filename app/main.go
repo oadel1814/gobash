@@ -41,7 +41,6 @@ func printBanner() {
 	)
 
 	printBannerRow("  Author", "Omar Adel", cyan, gray, reset)
-	printBannerRow("  License", "MIT", cyan, gray, reset)
 	printBannerRow("  Source", "github.com/you/gobash", cyan, gray, reset)
 
 	fmt.Println()
