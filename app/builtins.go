@@ -278,31 +278,39 @@ var history []Command
 
 var historyLastAppended int
 
+func loadHistory(filePath string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		tokens := tokenize(line)
+		if len(tokens) > 0 {
+			history = append(history, Command{
+				Name: tokens[0],
+				Args: tokens[1:],
+			})
+		}
+	}
+
+	return nil
+
+}
+
 func handleHistory(cmd Command) error {
 	if len(cmd.Args) >= 2 {
-		if cmd.Args[0] == "-r" {
+		switch cmd.Args[0] {
+		case "-r":
 			filePath := cmd.Args[1]
-			content, err := os.ReadFile(filePath)
-			if err != nil {
-				return fmt.Errorf("history: cannot read file: %w", err)
-			}
-
-			lines := strings.Split(string(content), "\n")
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line == "" {
-					continue
-				}
-
-				tokens := tokenize(line)
-				if len(tokens) > 0 {
-					history = append(history, Command{
-						Name: tokens[0],
-						Args: tokens[1:],
-					})
-				}
-			}
-		} else if cmd.Args[0] == "-w" {
+			return loadHistory(filePath)
+		case "-w":
 			filePath := cmd.Args[1]
 			var builder strings.Builder
 			for _, cmd := range history {
@@ -316,7 +324,7 @@ func handleHistory(cmd Command) error {
 			if err != nil {
 				return fmt.Errorf("history: cannot write file: %w", err)
 			}
-		} else if cmd.Args[0] == "-a" {
+		case "-a":
 			filePath := cmd.Args[1]
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {

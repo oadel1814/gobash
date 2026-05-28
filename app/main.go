@@ -84,6 +84,7 @@ func main() {
 	initReadline()
 	defer rl.Close()
 	// printBanner()
+	loadHistory(os.Getenv("HISTFILE"))
 	for {
 		input := prompt()
 		cmd := parse(input)
