@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 )
 
 type HandlerFunc func(cmd Command) error
@@ -56,6 +57,64 @@ var completions = map[string]string{}
 var mostRecentJob int
 var secondMostRecentJob int
 
+func recomputeMarkers() {
+	currentIds := make([]int, 0, len(backgroundJobs))
+	for k := range backgroundJobs {
+		currentIds = append(currentIds, k)
+	}
+	sort.Ints(currentIds)
+
+	switch len(currentIds) {
+	case 0:
+		mostRecentJob, secondMostRecentJob = 0, 0
+	case 1:
+		mostRecentJob, secondMostRecentJob = currentIds[0], 0
+	default:
+		mostRecentJob = currentIds[len(currentIds)-1]
+		secondMostRecentJob = currentIds[len(currentIds)-2]
+	}
+}
+
+func reapJobs() {
+	ids := make([]int, 0, len(backgroundJobs))
+	for id := range backgroundJobs {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+
+	var reaped []int
+
+	for _, id := range ids {
+		proc := backgroundJobs[id]
+
+		var ws syscall.WaitStatus
+		pid, err := syscall.Wait4(proc.Process.Pid, &ws, syscall.WNOHANG, nil)
+
+		if pid == proc.Process.Pid || err != nil {
+			var marker string
+			switch id {
+			case mostRecentJob:
+				marker = "+"
+			case secondMostRecentJob:
+				marker = "-"
+			default:
+				marker = " "
+			}
+
+			processString := strings.Join(proc.Args, " ")
+			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", processString)
+			reaped = append(reaped, id)
+		}
+	}
+
+	for _, id := range reaped {
+		delete(backgroundJobs, id)
+	}
+	if len(reaped) > 0 {
+		recomputeMarkers()
+	}
+}
+
 func handleJobs(cmd Command) error {
 	ids := make([]int, 0, len(backgroundJobs))
 	for id := range backgroundJobs {
@@ -63,9 +122,13 @@ func handleJobs(cmd Command) error {
 	}
 	sort.Ints(ids)
 
+	var reaped []int
+
 	for _, id := range ids {
 		proc := backgroundJobs[id]
-		processString := strings.Join(proc.Args, " ")
+
+		var ws syscall.WaitStatus
+		pid, err := syscall.Wait4(proc.Process.Pid, &ws, syscall.WNOHANG, nil)
 
 		var marker string
 		switch id {
@@ -77,31 +140,21 @@ func handleJobs(cmd Command) error {
 			marker = " "
 		}
 
-		if proc.ProcessState != nil && proc.ProcessState.Exited() {
-			fmt.Printf("[%d]%s %-24s%s\n", id, marker, "Done", processString)
-			delete(backgroundJobs, id)
+		processString := strings.Join(proc.Args, " ")
 
-			if mostRecentJob == id || secondMostRecentJob == id {
-				remaining := ids[:0]
-				for _, k := range ids {
-					if k != id {
-						remaining = append(remaining, k)
-					}
-				}
-				switch len(remaining) {
-				case 0:
-					mostRecentJob, secondMostRecentJob = 0, 0
-				case 1:
-					mostRecentJob, secondMostRecentJob = remaining[0], 0
-				default:
-					mostRecentJob = remaining[len(remaining)-1]
-					secondMostRecentJob = remaining[len(remaining)-2]
-				}
-			}
-
+		if pid == proc.Process.Pid || err != nil {
+			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", processString)
+			reaped = append(reaped, id)
 		} else {
-			fmt.Printf("[%d]%s %-24s%s &\n", id, marker, "Running", processString)
+			fmt.Printf("[%d]%s  %-24s%s &\n", id, marker, "Running", processString)
 		}
+	}
+
+	for _, id := range reaped {
+		delete(backgroundJobs, id)
+	}
+	if len(reaped) > 0 {
+		recomputeMarkers()
 	}
 
 	return nil

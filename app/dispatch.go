@@ -37,21 +37,21 @@ func executeExternal(cmd Command) error {
 		proc.Stdout = stdout
 		proc.Stderr = stderr
 
+		if err := proc.Start(); err != nil {
+			return err
+		}
+
 		backgroundJobs[backgroundCounter] = proc
 
 		secondMostRecentJob = mostRecentJob
 		mostRecentJob = backgroundCounter
 
-		if err := proc.Start(); err != nil {
-			return err
-		}
-
 		pid := proc.Process.Pid
 		fmt.Printf("[%d] %d\n", backgroundCounter, pid)
 		backgroundCounter++
-		go func() {
-			proc.Wait()
-		}()
+
+		// REMOVED the go func() { proc.Wait() }()
+		// reapJobs() using syscall.Wait4 will now accurately handle process completion
 
 		return nil
 	}

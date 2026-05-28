@@ -274,6 +274,7 @@ func initReadline() {
 }
 
 func prompt() string {
+	reapJobs()
 
 	line, err := rl.Readline()
 	if err != nil {
