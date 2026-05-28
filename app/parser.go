@@ -1,15 +1,20 @@
 package main
 
-import "strings"
+import (
+	"os"
+	"strings"
+)
 
 // Command holds a parsed shell command.
 type Command struct {
-	Name       string
-	Args       []string
-	Stdout     string
-	Stderr     string
-	Append     bool
-	background bool
+	Name           string
+	Args           []string
+	Stdout         string
+	Stderr         string
+	Append         bool
+	background     bool
+	StdinOverride  *os.File
+	StdoutOverride *os.File
 }
 
 func parse(input string) []Command {

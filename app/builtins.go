@@ -27,6 +27,9 @@ func init() {
 }
 
 func resolveStdout(cmd Command) (*os.File, error) {
+	if cmd.StdoutOverride != nil {
+		return cmd.StdoutOverride, nil
+	}
 	if cmd.Stdout == "" {
 		return os.Stdout, nil
 	}
@@ -38,7 +41,6 @@ func resolveStdout(cmd Command) (*os.File, error) {
 	}
 	return os.OpenFile(cmd.Stdout, flags, 0644)
 }
-
 func resolveStderr(cmd Command) (*os.File, error) {
 	if cmd.Stderr == "" {
 		return os.Stderr, nil
@@ -209,7 +211,7 @@ func handleEcho(cmd Command) error {
 	if err != nil {
 		return err
 	}
-	if stdout != os.Stdout {
+	if stdout != os.Stdout && cmd.StdoutOverride == nil {
 		defer stdout.Close()
 	}
 	_, err = io.WriteString(stdout, output+"\n")
@@ -257,6 +259,16 @@ func handleType(cmd Command) error {
 	if cmd.Name == "" {
 		return nil
 	}
+
+	stdout, err := resolveStdout(cmd)
+	if err != nil {
+		return err
+	}
+
+	if stdout != os.Stdout && cmd.StdoutOverride == nil {
+		defer stdout.Close()
+	}
+
 	if _, ok := builtins[cmd.Args[0]]; ok {
 		fmt.Printf("%s is a shell builtin\n", cmd.Args[0])
 		return nil

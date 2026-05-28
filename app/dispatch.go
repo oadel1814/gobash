@@ -72,33 +72,70 @@ func executeExternal(cmd Command) error {
 	return nil
 }
 
-func executePipeline(cmd1, cmd2 Command) error {
-	leftProc := exec.Command(cmd1.Name, cmd1.Args...)
-	rightProc := exec.Command(cmd2.Name, cmd2.Args...)
-
+func executePipeline(leftCmd, rightCmd Command) error {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return err
 	}
 
-	leftProc.Stdout = writer
-	leftProc.Stderr = os.Stderr
+	leftCmd.StdoutOverride = writer
+	rightCmd.StdinOverride = reader
 
-	rightProc.Stdin = reader
-	rightProc.Stdout = os.Stdout
-	rightProc.Stderr = os.Stderr
+	var leftWait func() error
+	var rightWait func() error
 
-	if err := leftProc.Start(); err != nil {
-		return err
+	if builtin, ok := builtins[leftCmd.Name]; ok {
+		done := make(chan error)
+		go func() {
+			err := builtin(leftCmd)
+			writer.Close()
+			done <- err
+		}()
+		leftWait = func() error { return <-done }
+	} else {
+		leftProc := exec.Command(leftCmd.Name, leftCmd.Args...)
+		leftProc.Stdin = os.Stdin
+		leftProc.Stdout = writer
+		leftProc.Stderr = os.Stderr
+		if err := leftProc.Start(); err != nil {
+			return err
+		}
+		writer.Close()
+		leftWait = func() error { return leftProc.Wait() }
 	}
-	if err := rightProc.Start(); err != nil {
-		return err
+
+	if builtin, ok := builtins[rightCmd.Name]; ok {
+		done := make(chan error)
+		go func() {
+			err := builtin(rightCmd)
+			reader.Close()
+			done <- err
+		}()
+		rightWait = func() error { return <-done }
+	} else {
+		rightProc := exec.Command(rightCmd.Name, rightCmd.Args...)
+		rightProc.Stdin = reader
+		rightProc.Stdout = os.Stdout
+		rightProc.Stderr = os.Stderr
+		if err := rightProc.Start(); err != nil {
+			return err
+		}
+		reader.Close()
+		rightWait = func() error { return rightProc.Wait() }
 	}
 
-	writer.Close()
+	errLeft := leftWait()
+	errRight := rightWait()
 
-	leftProc.Wait()
-	rightProc.Wait()
+	if errRight != nil {
+		if _, isExit := errRight.(*exec.ExitError); !isExit {
+			return errRight
+		}
+	} else if errLeft != nil {
+		if _, isExit := errLeft.(*exec.ExitError); !isExit {
+			return errLeft
+		}
+	}
 
 	return nil
 }
