@@ -27,7 +27,8 @@ func expandEnvVars(args string) string {
 				end := strings.Index(args[i:], "}")
 				if end != -1 {
 					varName := args[i+2 : i+end]
-					result.WriteString(os.Getenv(varName))
+					value := os.Getenv(varName)
+					result.WriteString(value)
 					i += end + 1
 				} else {
 					result.WriteByte(args[i])
@@ -91,8 +92,13 @@ func parse(input string) []Command {
 		for i := 0; i < len(args); i++ {
 
 			if strings.Contains(args[i], "$") {
-				// handle env var expansion
-				args[i] = expandEnvVars(args[i])
+				expanded := expandEnvVars(args[i])
+				if expanded == "" {
+					args = append(args[:i], args[i+1:]...)
+					i--
+				} else {
+					args[i] = expanded
+				}
 				continue
 			}
 
