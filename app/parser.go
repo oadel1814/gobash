@@ -16,6 +16,36 @@ type Command struct {
 	StdoutOverride *os.File
 }
 
+func expandEnvVars(args string) string {
+	parts := strings.Split(args, "$")
+	if len(parts) == 1 {
+		return args
+	}
+
+	var result strings.Builder
+	result.WriteString(parts[0])
+
+	for _, part := range parts[1:] {
+
+		varName := ""
+		for i, r := range part {
+			if r == '_' || (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+				varName += string(r)
+			} else {
+				result.WriteString(os.Getenv(varName))
+				result.WriteString(part[i:])
+				break
+			}
+		}
+
+		if varName != "" {
+			result.WriteString(os.Getenv(varName))
+		}
+	}
+
+	return result.String()
+}
+
 func parse(input string) []Command {
 
 	// parse for pipes here and return a slice of Commands, one per pipe segment
@@ -35,6 +65,13 @@ func parse(input string) []Command {
 		args := tokens[1:]
 
 		for i := 0; i < len(args); i++ {
+
+			if strings.Contains(args[i], "$") {
+				// handle env var expansion
+				args[i] = expandEnvVars(args[i])
+				continue
+			}
+
 			switch args[i] {
 			case ">", "1>":
 				if i+1 < len(args) {
