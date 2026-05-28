@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// Command holds a parsed shell command.
 type Command struct {
 	Name           string
 	Args           []string

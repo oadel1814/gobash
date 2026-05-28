@@ -23,6 +23,7 @@ func init() {
 		"exit":     handleExit,
 		"complete": handleComplete,
 		"jobs":     handleJobs,
+		"history":  handleHistory,
 	}
 }
 
@@ -159,6 +160,10 @@ func handleJobs(cmd Command) error {
 		recomputeMarkers()
 	}
 
+	return nil
+}
+
+func handleHistory(cmd Command) error {
 	return nil
 }
 
