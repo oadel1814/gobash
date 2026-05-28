@@ -25,7 +25,117 @@ func init() {
 		"complete": handleComplete,
 		"jobs":     handleJobs,
 		"history":  handleHistory,
+		"help":     handleHelp,
 	}
+}
+
+func handleHelp(cmd Command) error {
+	const (
+		reset  = "\033[0m"
+		bold   = "\033[1m"
+		dim    = "\033[2m"
+		cyan   = "\033[96m"
+		white  = "\033[97m"
+		gray   = "\033[90m"
+		yellow = "\033[33m"
+		green  = "\033[32m"
+	)
+
+	type entry struct {
+		cmd, args, desc string
+	}
+
+	sections := []struct {
+		title   string
+		entries []entry
+	}{
+		{
+			"Navigation",
+			[]entry{
+				{"cd", "[dir]", "Change directory. cd ~ goes home, cd - returns to previous"},
+				{"pwd", "", "Print current working directory"},
+				{"ls", "[dir]", "List directory contents (delegates to system ls)"},
+			},
+		},
+		{
+			"Jobs & Processes",
+			[]entry{
+				{"jobs", "", "List background jobs with their status and PID"},
+				{"fg", "[%n]", "Bring job n (or last job) to foreground"},
+				{"bg", "[%n]", "Resume stopped job n in background"},
+				{"kill", "%n | PID", "Send SIGTERM to a job or process"},
+			},
+		},
+		{
+			"Shell",
+			[]entry{
+				{"help", "[command]", "Show this screen, or detail for a specific command"},
+				{"exit", "[code]", "Exit the shell with optional status code"},
+				{"export", "NAME=val", "Set an environment variable"},
+				{"unset", "NAME", "Remove an environment variable"},
+				{"source", "file", "Execute a script in the current shell context"},
+				{"echo", "[args]", "Print arguments to stdout"},
+				{"history", "", "Show command history"},
+			},
+		},
+		{
+			"I/O & Pipelines",
+			[]entry{
+				{"cmd > file", "", "Redirect stdout to file (overwrite)"},
+				{"cmd >> file", "", "Redirect stdout to file (append)"},
+				{"cmd 2> file", "", "Redirect stderr to file"},
+				{"cmd1 | cmd2", "", "Pipe stdout of cmd1 to stdin of cmd2"},
+				{"cmd &", "", "Run command in background"},
+				{"cmd1 && cmd2", "", "Run cmd2 only if cmd1 succeeds"},
+				{"cmd1 || cmd2", "", "Run cmd2 only if cmd1 fails"},
+			},
+		},
+	}
+
+	// If a specific command was requested, show its detail
+	if len(cmd.Args) > 0 {
+		target := cmd.Args[0]
+		for _, sec := range sections {
+			for _, e := range sec.entries {
+				if strings.Fields(e.cmd)[0] == target {
+					fmt.Printf("\n %s%s%s  %s%s%s\n",
+						bold+white, e.cmd, reset,
+						dim+gray, e.args, reset,
+					)
+					fmt.Printf(" %s%s%s\n\n", gray, e.desc, reset)
+					return nil
+				}
+			}
+		}
+		fmt.Printf(" %sNo help entry for %q%s\n\n", gray, target, reset)
+		return nil
+	}
+
+	// Full help screen
+	fmt.Printf("\n %s%sGobash Help%s  %s%s%s\n\n",
+		bold, white, reset,
+		dim+gray, version, reset,
+	)
+
+	for _, sec := range sections {
+		fmt.Printf(" %s%s%s\n", yellow, sec.title, reset)
+		fmt.Printf(" %s%s%s\n", dim+gray, strings.Repeat("─", 52), reset)
+
+		for _, e := range sec.entries {
+			col := fmt.Sprintf("%s%-16s%s%s%-10s%s",
+				cyan, e.cmd, reset,
+				dim+gray, e.args, reset,
+			)
+			fmt.Printf("   %s  %s%s%s\n", col, gray, e.desc, reset)
+		}
+		fmt.Println()
+	}
+
+	fmt.Printf(" %s✦ Tip:%s %shelp <command>%s for more detail on any command.\n\n",
+		yellow, reset, cyan, reset,
+	)
+
+	return nil
 }
 
 func resolveStdout(cmd Command) (*os.File, error) {
@@ -166,6 +276,8 @@ func handleJobs(cmd Command) error {
 
 var history []Command
 
+var historyLastAppended int
+
 func handleHistory(cmd Command) error {
 	if len(cmd.Args) >= 2 {
 		if cmd.Args[0] == "-r" {
@@ -204,6 +316,25 @@ func handleHistory(cmd Command) error {
 			if err != nil {
 				return fmt.Errorf("history: cannot write file: %w", err)
 			}
+		} else if cmd.Args[0] == "-a" {
+			filePath := cmd.Args[1]
+			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return fmt.Errorf("history: cannot open file for appending: %w", err)
+			}
+			defer f.Close()
+
+			for i := historyLastAppended; i < len(history); i++ {
+				line := history[i].Name
+				if len(history[i].Args) > 0 {
+					line += " " + strings.Join(history[i].Args, " ")
+				}
+				line += "\n"
+				if _, err := f.WriteString(line); err != nil {
+					return fmt.Errorf("history: cannot write to file: %w", err)
+				}
+			}
+			historyLastAppended = len(history)
 		}
 		return nil
 	}
