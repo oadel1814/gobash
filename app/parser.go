@@ -12,56 +12,65 @@ type Command struct {
 	background bool
 }
 
-func parse(input string) Command {
-	tokens := tokenize(input)
-	cmd := Command{}
+func parse(input string) []Command {
 
-	if len(tokens) == 0 {
-		return cmd
-	}
+	// parse for pipes here and return a slice of Commands, one per pipe segment
+	pipeSegments := strings.Split(input, "|")
+	commands := make([]Command, 0, len(pipeSegments))
 
-	cmd.Name = tokens[0]
-	args := tokens[1:]
+	for _, segment := range pipeSegments {
+		tokens := tokenize(strings.TrimSpace(segment))
+		cmd := Command{}
 
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case ">", "1>":
-			if i+1 < len(args) {
-				cmd.Stdout = args[i+1]
-				args = append(args[:i], args[i+2:]...)
-				i--
-			}
-		case ">>", "1>>":
-			if i+1 < len(args) {
-				cmd.Stdout = args[i+1]
-				cmd.Append = true
-				args = append(args[:i], args[i+2:]...)
-				i--
-			}
-		case "2>":
-			if i+1 < len(args) {
-				cmd.Stderr = args[i+1]
-				args = append(args[:i], args[i+2:]...)
-				i--
-			}
-		case "2>>":
-			if i+1 < len(args) {
-				cmd.Stderr = args[i+1]
-				cmd.Append = true
-				args = append(args[:i], args[i+2:]...)
-				i--
-			}
-		case "&":
-			cmd.background = true
-			args = append(args[:i], args[i+1:]...)
-			i--
-		default:
+		if len(tokens) == 0 {
+			commands = append(commands, cmd)
 			continue
 		}
-	}
 
-	cmd.Args = args
-	return cmd
+		cmd.Name = tokens[0]
+		args := tokens[1:]
+
+		for i := 0; i < len(args); i++ {
+			switch args[i] {
+			case ">", "1>":
+				if i+1 < len(args) {
+					cmd.Stdout = args[i+1]
+					args = append(args[:i], args[i+2:]...)
+					i--
+				}
+			case ">>", "1>>":
+				if i+1 < len(args) {
+					cmd.Stdout = args[i+1]
+					cmd.Append = true
+					args = append(args[:i], args[i+2:]...)
+					i--
+				}
+			case "2>":
+				if i+1 < len(args) {
+					cmd.Stderr = args[i+1]
+					args = append(args[:i], args[i+2:]...)
+					i--
+				}
+			case "2>>":
+				if i+1 < len(args) {
+					cmd.Stderr = args[i+1]
+					cmd.Append = true
+					args = append(args[:i], args[i+2:]...)
+					i--
+				}
+			case "&":
+				cmd.background = true
+				args = append(args[:i], args[i+1:]...)
+				i--
+			default:
+				continue
+			}
+		}
+
+		cmd.Args = args
+		commands = append(commands, cmd)
+	}
+	return commands
 }
 
 func tokenize(input string) []string {
