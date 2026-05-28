@@ -183,6 +183,8 @@ func dispatch(cmds []Command) error {
 		if cmd.Name == "" {
 			return nil
 		}
+
+		history = append(history, cmd)
 		if handler, ok := builtins[cmd.Name]; ok {
 			return handler(cmd)
 		}

@@ -163,7 +163,12 @@ func handleJobs(cmd Command) error {
 	return nil
 }
 
+var history []Command
+
 func handleHistory(cmd Command) error {
+	for i, command := range history {
+		fmt.Printf("%5d  %s\n", i+1, strings.Join(append([]string{command.Name}, command.Args...), " "))
+	}
 	return nil
 }
 
