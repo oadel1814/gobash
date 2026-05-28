@@ -72,72 +72,105 @@ func executeExternal(cmd Command) error {
 	return nil
 }
 
-func executePipeline(leftCmd, rightCmd Command) error {
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return err
+func executePipeline(cmds []Command) error {
+	var waits []func() error
+	var prevReader *os.File
+
+	for i := 0; i < len(cmds); i++ {
+		cmd := cmds[i]
+		isLast := (i == len(cmds)-1)
+
+		var nextReader, currentWriter *os.File
+
+		if !isLast {
+			r, w, err := os.Pipe()
+			if err != nil {
+				return err
+			}
+			nextReader = r
+			currentWriter = w
+		}
+
+		cmd.StdinOverride = prevReader
+		cmd.StdoutOverride = currentWriter
+
+		if builtin, ok := builtins[cmd.Name]; ok {
+			done := make(chan error, 1)
+			pr := prevReader
+			cw := currentWriter
+
+			go func(c Command) {
+				err := builtin(c)
+				if pr != nil {
+					pr.Close()
+				}
+				if cw != nil {
+					cw.Close()
+				}
+				done <- err
+			}(cmd)
+
+			waits = append(waits, func() error { return <-done })
+
+		} else {
+			proc := exec.Command(cmd.Name, cmd.Args...)
+
+			if prevReader != nil {
+				proc.Stdin = prevReader
+			} else {
+				proc.Stdin = os.Stdin
+			}
+
+			if currentWriter != nil {
+				proc.Stdout = currentWriter
+			} else {
+				stdout, err := resolveStdout(cmd)
+				if err != nil {
+					return err
+				}
+				if stdout != os.Stdout {
+					defer stdout.Close()
+				}
+				proc.Stdout = stdout
+			}
+
+			stderr, err := resolveStderr(cmd)
+			if err != nil {
+				return err
+			}
+			if stderr != os.Stderr {
+				defer stderr.Close()
+			}
+			proc.Stderr = stderr
+
+			if err := proc.Start(); err != nil {
+				return err
+			}
+
+			if prevReader != nil {
+				prevReader.Close()
+			}
+			if currentWriter != nil {
+				currentWriter.Close()
+			}
+
+			waits = append(waits, func() error { return proc.Wait() })
+		}
+
+		prevReader = nextReader
 	}
 
-	leftCmd.StdoutOverride = writer
-	rightCmd.StdinOverride = reader
-
-	var leftWait func() error
-	var rightWait func() error
-
-	if builtin, ok := builtins[leftCmd.Name]; ok {
-		done := make(chan error)
-		go func() {
-			err := builtin(leftCmd)
-			writer.Close()
-			done <- err
-		}()
-		leftWait = func() error { return <-done }
-	} else {
-		leftProc := exec.Command(leftCmd.Name, leftCmd.Args...)
-		leftProc.Stdin = os.Stdin
-		leftProc.Stdout = writer
-		leftProc.Stderr = os.Stderr
-		if err := leftProc.Start(); err != nil {
-			return err
-		}
-		writer.Close()
-		leftWait = func() error { return leftProc.Wait() }
-	}
-
-	if builtin, ok := builtins[rightCmd.Name]; ok {
-		done := make(chan error)
-		go func() {
-			err := builtin(rightCmd)
-			reader.Close()
-			done <- err
-		}()
-		rightWait = func() error { return <-done }
-	} else {
-		rightProc := exec.Command(rightCmd.Name, rightCmd.Args...)
-		rightProc.Stdin = reader
-		rightProc.Stdout = os.Stdout
-		rightProc.Stderr = os.Stderr
-		if err := rightProc.Start(); err != nil {
-			return err
-		}
-		reader.Close()
-		rightWait = func() error { return rightProc.Wait() }
-	}
-
-	errLeft := leftWait()
-	errRight := rightWait()
-
-	if errRight != nil {
-		if _, isExit := errRight.(*exec.ExitError); !isExit {
-			return errRight
-		}
-	} else if errLeft != nil {
-		if _, isExit := errLeft.(*exec.ExitError); !isExit {
-			return errLeft
+	var lastErr error
+	for _, w := range waits {
+		err := w()
+		if err != nil {
+			if _, isExit := err.(*exec.ExitError); !isExit {
+				lastErr = err
+			}
 		}
 	}
 
-	return nil
+	return lastErr
 }
 
 func dispatch(cmds []Command) error {
@@ -159,9 +192,6 @@ func dispatch(cmds []Command) error {
 		return fmt.Errorf("%s: command not found", cmd.Name)
 	}
 
-	if len(cmds) == 2 {
-		return executePipeline(cmds[0], cmds[1])
-	}
+	return executePipeline(cmds)
 
-	return fmt.Errorf("pipelines with more than 2 commands not yet supported")
 }

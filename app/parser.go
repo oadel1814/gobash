@@ -79,7 +79,39 @@ func parse(input string) []Command {
 }
 
 func tokenize(input string) []string {
-	// thin wrapper kept separate so you can later
-	// swap in a smarter tokenizer (e.g. quoting support)
-	return strings.Fields(input)
+	var tokens []string
+	var current strings.Builder
+	inSingle := false
+	inDouble := false
+
+	for _, r := range input {
+		switch r {
+		case '\'':
+			if !inDouble {
+				inSingle = !inSingle
+				continue
+			}
+		case '"':
+			if !inSingle {
+				inDouble = !inDouble
+				continue
+			}
+		case ' ', '\t':
+			if !inSingle && !inDouble {
+				if current.Len() > 0 {
+					tokens = append(tokens, current.String())
+					current.Reset()
+				}
+				continue
+			}
+		}
+
+		current.WriteRune(r)
+	}
+
+	if current.Len() > 0 {
+		tokens = append(tokens, current.String())
+	}
+
+	return tokens
 }
