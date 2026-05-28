@@ -17,6 +17,30 @@ type Command struct {
 }
 
 func expandEnvVars(args string) string {
+
+	if strings.Contains(args, "{") {
+		// handle ${VAR} syntax
+		var result strings.Builder
+		i := 0
+		for i < len(args) {
+			if args[i] == '$' && i+1 < len(args) && args[i+1] == '{' {
+				end := strings.Index(args[i:], "}")
+				if end != -1 {
+					varName := args[i+2 : i+end]
+					result.WriteString(os.Getenv(varName))
+					i += end + 1
+				} else {
+					result.WriteByte(args[i])
+					i++
+				}
+			} else {
+				result.WriteByte(args[i])
+				i++
+			}
+		}
+		return result.String()
+	}
+
 	parts := strings.Split(args, "$")
 	if len(parts) == 1 {
 		return args
