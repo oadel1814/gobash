@@ -299,7 +299,7 @@ func loadHistory(filePath string) error {
 			})
 		}
 	}
-
+	historyLastAppended = len(history)
 	return nil
 
 }
@@ -508,7 +508,7 @@ func handleType(cmd Command) error {
 }
 
 func handleExit(cmd Command) error {
-	writeHistory(os.Getenv("HISTFILE"))
+	appendHistory(os.Getenv("HISTFILE"))
 	os.Exit(0)
 	return nil
 }
