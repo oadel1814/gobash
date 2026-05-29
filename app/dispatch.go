@@ -4,9 +4,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-var backgroundJobs = make(map[int]*exec.Cmd)
+type Job struct {
+	Cmd  *exec.Cmd
+	Args string
+	Done bool
+}
+
+var backgroundJobs = make(map[int]*Job)
 
 func isExecutable(name string) (bool, string) {
 	path, ok := getExecutables()[name]
@@ -48,13 +55,28 @@ func executeExternal(cmd Command) error {
 			jobID++
 		}
 
-		backgroundJobs[jobID] = proc
+		displayArgs := cmd.Name
+		if len(cmd.Args) > 0 {
+			displayArgs += " " + strings.Join(cmd.Args, " ")
+		}
+
+		job := &Job{
+			Cmd:  proc,
+			Args: displayArgs,
+			Done: false,
+		}
+		backgroundJobs[jobID] = job
 
 		secondMostRecentJob = mostRecentJob
 		mostRecentJob = jobID
 
 		pid := proc.Process.Pid
 		fmt.Printf("[%d] %d\n", jobID, pid)
+
+		go func() {
+			proc.Wait()
+			job.Done = true
+		}()
 
 		return nil
 	}
@@ -195,5 +217,4 @@ func dispatch(cmds []Command) error {
 	}
 
 	return executePipeline(cmds)
-
 }

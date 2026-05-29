@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 type HandlerFunc func(cmd Command) error
@@ -203,6 +202,7 @@ func resolveStdout(cmd Command) (*os.File, error) {
 	}
 	return os.OpenFile(cmd.Stdout, flags, 0644)
 }
+
 func resolveStderr(cmd Command) (*os.File, error) {
 	if cmd.Stderr == "" {
 		return os.Stderr, nil
@@ -249,26 +249,22 @@ func reapJobs() {
 	var reaped []int
 
 	for _, id := range ids {
-		proc := backgroundJobs[id]
+		job := backgroundJobs[id]
 
-		var ws syscall.WaitStatus
-		pid, err := syscall.Wait4(proc.Process.Pid, &ws, syscall.WNOHANG, nil)
-
-		if pid == proc.Process.Pid || err != nil {
-			var marker string
-			switch id {
-			case mostRecentJob:
-				marker = "+"
-			case secondMostRecentJob:
-				marker = "-"
-			default:
-				marker = " "
-			}
-
-			processString := strings.Join(proc.Args, " ")
-			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", processString)
-			reaped = append(reaped, id)
+		if !job.Done {
+			continue
 		}
+
+		marker := " "
+		switch id {
+		case mostRecentJob:
+			marker = "+"
+		case secondMostRecentJob:
+			marker = "-"
+		}
+
+		fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", job.Args)
+		reaped = append(reaped, id)
 	}
 
 	for _, id := range reaped {
@@ -289,28 +285,21 @@ func handleJobs(cmd Command) error {
 	var reaped []int
 
 	for _, id := range ids {
-		proc := backgroundJobs[id]
+		job := backgroundJobs[id]
 
-		var ws syscall.WaitStatus
-		pid, err := syscall.Wait4(proc.Process.Pid, &ws, syscall.WNOHANG, nil)
-
-		var marker string
+		marker := " "
 		switch id {
 		case mostRecentJob:
 			marker = "+"
 		case secondMostRecentJob:
 			marker = "-"
-		default:
-			marker = " "
 		}
 
-		processString := strings.Join(proc.Args, " ")
-
-		if pid == proc.Process.Pid || err != nil {
-			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", processString)
+		if job.Done {
+			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Done", job.Args)
 			reaped = append(reaped, id)
 		} else {
-			fmt.Printf("[%d]%s  %-24s%s &\n", id, marker, "Running", processString)
+			fmt.Printf("[%d]%s  %-24s%s\n", id, marker, "Running", job.Args)
 		}
 	}
 
@@ -351,7 +340,6 @@ func loadHistory(filePath string) error {
 	}
 	historyLastAppended = len(history)
 	return nil
-
 }
 
 func writeHistory(filePath string) error {
@@ -439,7 +427,6 @@ func handleHistory(cmd Command) error {
 }
 
 func handleComplete(cmd Command) error {
-
 	if len(cmd.Args) == 0 {
 		return nil
 	}
@@ -475,7 +462,6 @@ func handleComplete(cmd Command) error {
 	}
 
 	return nil
-
 }
 
 func handleEcho(cmd Command) error {
