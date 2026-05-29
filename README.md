@@ -323,9 +323,12 @@ go version
 HTTPS
 git clone git@github.com:oadel1814/gobash.git
 
+or 
+
 SSH
 git clone git@github.com:oadel1814/gobash.git
-cd <repo_directory>
+
+cd gobash
 ```
 
 ---
