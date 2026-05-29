@@ -320,8 +320,12 @@ go version
 ## Clone Repository
 
 ```bash
-git clone <your-repository-url>
-cd <repository-name>
+HTTPS
+git clone git@github.com:oadel1814/gobash.git
+
+SSH
+git clone git@github.com:oadel1814/gobash.git
+cd <repo_directory>
 ```
 
 ---
