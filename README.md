@@ -319,15 +319,16 @@ go version
 
 ## Clone Repository
 
-```bash
 HTTPS
+```bash
 git clone git@github.com:oadel1814/gobash.git
-
-or 
+```
 
 SSH
+```bash
 git clone git@github.com:oadel1814/gobash.git
-
+```
+```bash
 cd gobash
 ```
 
