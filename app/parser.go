@@ -150,7 +150,20 @@ func tokenize(input string) []string {
 	inSingle := false
 	inDouble := false
 
-	for _, r := range input {
+	runes := []rune(input)
+
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+
+		// handle backslash outside quotes
+		if r == '\\' && !inSingle && !inDouble {
+			if i+1 < len(runes) {
+				current.WriteRune(runes[i+1])
+				i++
+			}
+			continue
+		}
+
 		switch r {
 		case '\'':
 			if !inDouble {
@@ -162,6 +175,7 @@ func tokenize(input string) []string {
 				inDouble = !inDouble
 				continue
 			}
+
 		case ' ', '\t':
 			if !inSingle && !inDouble {
 				if current.Len() > 0 {
