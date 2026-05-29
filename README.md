@@ -1,8 +1,8 @@
-<img width="841" height="460" alt="image" src="https://github.com/user-attachments/assets/ff1b345e-1f47-4511-ab8a-f022d2148f23" />
+<img width="900" height="460" alt="image" src="https://github.com/user-attachments/assets/ff1b345e-1f47-4511-ab8a-f022d2148f23" />
 
 # Gobash
 
-A POSIX-like shell implementation written in Go as part of go studying and the journey of improve my skill in it by doing real projects rather than falling in the tutorial hell.
+A POSIX-like shell implementation written in Go as part of go studying and the journey of improving my skill in it by doing real projects rather than falling in the tutorial hell.
 
 This project implements command parsing, built-in commands, program execution, job control, pipelines, redirections, command completion, history management, parameter expansion, and more.
 
