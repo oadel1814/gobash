@@ -155,6 +155,16 @@ func tokenize(input string) []string {
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
 
+		if r == '\\' && inDouble {
+			if i+1 < len(runes) {
+				if runes[i+1] == '"' || runes[i+1] == '\\' || runes[i+1] == '$' || runes[i+1] == '`' || runes[i+1] == '\n' {
+					current.WriteRune(runes[i+1])
+					i++
+				}
+				continue
+			}
+		}
+
 		// handle backslash outside quotes
 		if r == '\\' && !inSingle && !inDouble {
 			if i+1 < len(runes) {
