@@ -82,7 +82,7 @@ func printBannerRow(label, value, labelColor, valueColor, reset string) {
 func main() {
 	initReadline()
 	defer rl.Close()
-	// printBanner()
+	printBanner()
 	loadHistory(os.Getenv("HISTFILE"))
 	for {
 		input := prompt()

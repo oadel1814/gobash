@@ -110,9 +110,6 @@ func handleHelp(cmd Command) error {
 			"Jobs & Processes",
 			[]entry{
 				{"jobs", "", "List background jobs with their status and PID"},
-				{"fg", "[%n]", "Bring job n (or last job) to foreground"},
-				{"bg", "[%n]", "Resume stopped job n in background"},
-				{"kill", "%n | PID", "Send SIGTERM to a job or process"},
 			},
 		},
 		{
@@ -120,23 +117,8 @@ func handleHelp(cmd Command) error {
 			[]entry{
 				{"help", "[command]", "Show this screen, or detail for a specific command"},
 				{"exit", "[code]", "Exit the shell with optional status code"},
-				{"export", "NAME=val", "Set an environment variable"},
-				{"unset", "NAME", "Remove an environment variable"},
-				{"source", "file", "Execute a script in the current shell context"},
 				{"echo", "[args]", "Print arguments to stdout"},
 				{"history", "", "Show command history"},
-			},
-		},
-		{
-			"I/O & Pipelines",
-			[]entry{
-				{"cmd > file", "", "Redirect stdout to file (overwrite)"},
-				{"cmd >> file", "", "Redirect stdout to file (append)"},
-				{"cmd 2> file", "", "Redirect stderr to file"},
-				{"cmd1 | cmd2", "", "Pipe stdout of cmd1 to stdin of cmd2"},
-				{"cmd &", "", "Run command in background"},
-				{"cmd1 && cmd2", "", "Run cmd2 only if cmd1 succeeds"},
-				{"cmd1 || cmd2", "", "Run cmd2 only if cmd1 fails"},
 			},
 		},
 	}

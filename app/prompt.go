@@ -266,8 +266,24 @@ func initReadline() {
 	}
 }
 
+func updatePrompt() {
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "?"
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil && strings.HasPrefix(wd, home) {
+		wd = "~" + strings.TrimPrefix(wd, home)
+	}
+
+	rl.SetPrompt("\033[96m" + wd + "\033[0m ❯ ")
+}
+
 func prompt() string {
 	reapJobs()
+
+	updatePrompt()
 
 	line, err := rl.Readline()
 	if err != nil {
